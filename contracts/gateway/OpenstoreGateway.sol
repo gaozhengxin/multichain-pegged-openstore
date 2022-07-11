@@ -14,11 +14,9 @@ import "../lib/Address.sol";
 contract ERC1155Gateway_LILO is ERC1155Gateway {
     using Address for address;
 
-    constructor(
-        address anyCallProxy,
-        uint256 flag,
-        address token
-    ) ERC1155Gateway(anyCallProxy, flag, token) {}
+    constructor(address anyCallProxy, address token)
+        ERC1155Gateway(anyCallProxy, token)
+    {}
 
     function _swapout(
         address sender,

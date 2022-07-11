@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./anycall_app.sol";
+import "./AnycallApp.sol";
 
 interface IGatewayClient {
     function notifySwapoutFallback(
@@ -38,17 +38,24 @@ interface IERC1155Gateway {
 
 abstract contract ERC1155Gateway is IERC1155Gateway, AnyCallApp {
     address public override token;
-    mapping(uint256 => uint8) public decimals;
     uint256 public swapoutSeq;
     string public override name;
 
+    mapping(uint256 => uint256) public price; // chainId => price per transfer
+
     constructor(
         address anyCallProxy,
-        uint256 flag,
         address token_
-    ) AnyCallApp(anyCallProxy, flag) {
+    ) AnyCallApp(anyCallProxy, 0) {
         setAdmin(msg.sender);
         token = token_;
+    }
+
+    function setPrice(uint256[] calldata chainIDs, uint256[] calldata prices) external onlyAdmin {
+        require(chainIDs.length == prices.length);
+        for (uint i = 0; i < chainIDs.length; i++) {
+            price[chainIDs[i]] = prices[i];
+        }
     }
 
     function getPeer(uint256 foreignChainID)
@@ -58,6 +65,11 @@ abstract contract ERC1155Gateway is IERC1155Gateway, AnyCallApp {
         returns (address)
     {
         return peer[foreignChainID];
+    }
+
+    function collectFee(address to) external onlyAdmin returns (bool) {
+        (bool sent, ) = to.call{value: address(this).balance}("");
+        return sent;
     }
 
     function _swapout(
@@ -90,8 +102,8 @@ abstract contract ERC1155Gateway is IERC1155Gateway, AnyCallApp {
     );
 
     function setForeignGateway(
-        uint256[] memory chainIDs,
-        address[] memory peers
+        uint256[] calldata chainIDs,
+        address[] calldata peers
     ) external onlyAdmin {
         for (uint256 i = 0; i < chainIDs.length; i++) {
             peer[chainIDs[i]] = peers[i];
@@ -104,6 +116,7 @@ abstract contract ERC1155Gateway is IERC1155Gateway, AnyCallApp {
         address receiver,
         uint256 destChainID
     ) external payable override returns (uint256) {
+        require(msg.value >= price[destChainID]);
         (bool ok, bytes memory extraMsg) = _swapout(
             msg.sender,
             tokenId,
@@ -136,6 +149,7 @@ abstract contract ERC1155Gateway is IERC1155Gateway, AnyCallApp {
         address receiver,
         uint256 destChainID
     ) external payable override returns (uint256) {
+        require(msg.value >= price[destChainID]);
         (bool ok, bytes memory extraMsg) = _swapout(
             msg.sender,
             tokenId,

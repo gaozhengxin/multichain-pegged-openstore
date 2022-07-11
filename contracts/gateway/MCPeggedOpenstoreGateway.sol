@@ -32,9 +32,8 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
 
     constructor(
         address anyCallProxy,
-        uint256 flag,
         address token
-    ) ERC1155Gateway(anyCallProxy, flag, token) {}
+    ) ERC1155Gateway(anyCallProxy, token) {}
 
     function _swapout(
         address sender,

@@ -61,11 +61,9 @@ contract MC_AssetContractShared is AssetContract, ReentrancyGuard {
         string memory _name,
         string memory _symbol,
         string memory _templateURI,
-        address _migrationAddress,
-        address gateway_
+        address _migrationAddress
     ) AssetContract(_name, _symbol, address(0), _templateURI) {
         migrationTarget = MC_AssetContractShared(_migrationAddress);
-        gateway = gateway_;
     }
 
     function setGateway(address gateway_) external onlyOwner {
