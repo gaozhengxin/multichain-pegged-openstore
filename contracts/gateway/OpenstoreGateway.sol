@@ -11,6 +11,18 @@ pragma solidity ^0.8.0;
 import "./ERC1155Gateway.sol";
 import "../lib/Address.sol";
 
+interface IOpenstore {
+    function uri(uint256 _id) external view returns (string memory);
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes calldata data
+    ) external;
+}
+
 contract ERC1155Gateway_LILO is ERC1155Gateway {
     using Address for address;
 
@@ -23,12 +35,12 @@ contract ERC1155Gateway_LILO is ERC1155Gateway {
         uint256 tokenId,
         uint256 amount
     ) internal virtual override returns (bool, bytes memory) {
-        /*try IMintBurn1155(token).burn(sender, tokenId, amount) {
-            return (true, "");
+        try IOpenstore(token).safeTransferFrom(sender, address(this), tokenId, amount, "") {
+            bytes memory extraMsg = bytes(IOpenstore(token).uri(tokenId));
+            return (true, extraMsg);
         } catch {
             return (false, "");
-        }*/
-        // TODO
+        }
         return (false, "");
     }
 
@@ -38,12 +50,14 @@ contract ERC1155Gateway_LILO is ERC1155Gateway {
         address receiver,
         bytes memory extraMsg
     ) internal override returns (bool) {
-        /*try IMintBurn1155(token).mint(receiver, tokenId, amount) {
+        if (!(keccak256(abi.encodePacked(bytes(IOpenstore(token).uri(tokenId)))) == keccak256(abi.encodePacked(extraMsg)))) {
+            return false;
+        }
+        try IOpenstore(token).safeTransferFrom(address(this), receiver, tokenId, amount, "") {
             return true;
         } catch {
             return false;
-        }*/
-        // TODO
+        }
         return false;
     }
 
@@ -54,7 +68,10 @@ contract ERC1155Gateway_LILO is ERC1155Gateway {
         uint256 swapoutSeq,
         bytes memory extraMsg
     ) internal override returns (bool result) {
-        /*try IMintBurn1155(token).mint(sender, tokenId, amount) {
+        if (!(keccak256(abi.encodePacked(bytes(IOpenstore(token).uri(tokenId)))) == keccak256(abi.encodePacked(extraMsg)))) {
+            return false;
+        }
+        try IOpenstore(token).safeTransferFrom(address(this), sender, tokenId, amount, "") {
             result = true;
         } catch {
             result = false;
@@ -69,8 +86,5 @@ contract ERC1155Gateway_LILO is ERC1155Gateway {
             );
             sender.call(_data);
         }
-        return result;*/
-        // TODO
-        return false;
     }
 }

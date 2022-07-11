@@ -11,37 +11,38 @@ pragma solidity ^0.8.0;
 import "./ERC1155Gateway.sol";
 import "../lib/Address.sol";
 
-interface IMintBurn1155 {
+interface IMCOpenstore {
+    function uri(uint256 _id) external view returns (string memory);
+
     function mint(
         address account,
         uint256 tokenId,
-        uint256 amount
+        uint256 amount,
+        bytes memory data
     ) external;
 
-    // function mint(address account, uint256 tokenId, uint256 amount, bytes memory data) external;
     function burn(
         address account,
         uint256 tokenId,
         uint256 amount
     ) external;
-    // function burn(address account, uint256 tokenId, uint256 amount, bytes memory data) external;
 }
 
 contract ERC1155Gateway_MintBurn is ERC1155Gateway {
     using Address for address;
 
-    constructor(
-        address anyCallProxy,
-        address token
-    ) ERC1155Gateway(anyCallProxy, token) {}
+    constructor(address anyCallProxy, address token)
+        ERC1155Gateway(anyCallProxy, token)
+    {}
 
     function _swapout(
         address sender,
         uint256 tokenId,
         uint256 amount
     ) internal virtual override returns (bool, bytes memory) {
-        try IMintBurn1155(token).burn(sender, tokenId, amount) {
-            return (true, "");
+        try IMCOpenstore(token).burn(sender, tokenId, amount) {
+            bytes memory extraMsg = bytes(IMCOpenstore(token).uri(tokenId));
+            return (true, extraMsg);
         } catch {
             return (false, "");
         }
@@ -53,7 +54,7 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
         address receiver,
         bytes memory extraMsg
     ) internal override returns (bool) {
-        try IMintBurn1155(token).mint(receiver, tokenId, amount) {
+        try IMCOpenstore(token).mint(receiver, tokenId, amount, extraMsg) {
             return true;
         } catch {
             return false;
@@ -67,7 +68,7 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
         uint256 swapoutSeq,
         bytes memory extraMsg
     ) internal override returns (bool result) {
-        try IMintBurn1155(token).mint(sender, tokenId, amount) {
+        try IMCOpenstore(token).mint(sender, tokenId, amount, extraMsg) {
             result = true;
         } catch {
             result = false;
