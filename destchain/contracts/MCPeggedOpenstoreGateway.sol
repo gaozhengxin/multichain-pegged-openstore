@@ -32,6 +32,8 @@ interface IMCOpenstore {
         external
         view
         returns (uint256);
+
+    function totalSupply(uint256 _id) external view returns (uint256);
 }
 
 interface IFactory {
@@ -68,10 +70,12 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
         external
         returns (uint256 tokenId721)
     {
-        address erc721 = IFactory(factory).getERC721Address(tokenId.tokenCreator());
+        address erc721 = IFactory(factory).getERC721Address(
+            tokenId.tokenCreator()
+        );
         require(erc721.isContract());
         require(tokenId.tokenMaxSupply() == 1);
-        require(IMCOpenstore.balanceOf(msg.sender, tokenId) == 1);
+        require(IMCOpenstore(token).balanceOf(msg.sender, tokenId) == 1);
         tokenId721 = tokenId.tokenIndex();
         IMCOpenstore(token).burn(msg.sender, tokenId, 1);
         IERC721(erc721).mint(msg.sender, tokenId721);
@@ -85,8 +89,11 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
         require(erc721 == IFactory(factory).getERC721Address(creator));
         require(IERC721(erc721).ownerOf(tokenId) == msg.sender);
         IERC721(erc721).burn(tokenId);
-        tokenId1155 = 0;
-        IMCOpenstore(token).mint(msg.sender, tokenId1155, 1);
+        tokenId1155 = uint256(uint160(creator)) << 56;
+        tokenId1155 += tokenId;
+        tokenId1155 = tokenId1155 << 40;
+        tokenId1155 += 1;
+        IMCOpenstore(token).mint(msg.sender, tokenId1155, 1, "");
     }
 
     function _swapout(
@@ -94,24 +101,17 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
         uint256 tokenId,
         uint256 amount
     ) internal virtual override returns (bool, bytes memory) {
-        // Calc ERC721 collection and tokenId
-        // if is NFT
-        // - Find ERC721 contract
-        // - Burn ERC721
-        // else
         bytes memory extraMsg = bytes(IMCOpenstore(token).uri(tokenId));
-        address erc721 = IFactory(factory).getERC721Address(tokenCreator(tokenId));
-        uint256 tokenIndex = tokenId.tokenIndex;
+        address erc721 = IFactory(factory).getERC721Address(
+            tokenId.tokenCreator()
+        );
+        uint256 tokenIndex = tokenId.tokenIndex();
         if (
-            tokenId.tokenMaxSupply == 1 &&
+            tokenId.tokenMaxSupply() == 1 &&
             erc721.isContract() &&
             IERC721(erc721).exists(tokenIndex)
         ) {
-            try IERC721(erc721).burn() {
-                return (true, extraMsg);
-            } catch {
-                return (false, "");
-            }
+            return (false, "");
         }
         try IMCOpenstore(token).burn(sender, tokenId, amount) {
             return (true, extraMsg);
@@ -126,11 +126,22 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
         address receiver,
         bytes memory extraMsg
     ) internal override returns (bool) {
-        // Calc ERC721 collection and tokenId
-        // if is NFT, mint ERC721
-        // - Find ERC721 contract
-        // - Mint ERC721
-        // else
+        address erc721 = IFactory(factory).getERC721Address(
+            tokenId.tokenCreator()
+        );
+        uint256 tokenIndex = tokenId.tokenIndex();
+        if (
+            amount == 1 && tokenId.tokenMaxSupply() == 1 && erc721.isContract()
+        ) {
+            if (IMCOpenstore(token).totalSupply(tokenId) == 0) {
+                return false;
+            }
+            try IERC721(erc721).mint(receiver, tokenIndex) {
+                return true;
+            } catch {
+                return false;
+            }
+        }
         try IMCOpenstore(token).mint(receiver, tokenId, amount, extraMsg) {
             return true;
         } catch {
