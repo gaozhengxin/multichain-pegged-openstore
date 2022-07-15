@@ -18,10 +18,10 @@
  *
  */
 
-var PrivateKeyProvider = require("truffle-privatekey-provider");
+ var PrivateKeyProvider = require("@truffle/hdwallet-provider");
 
-const fs = require('fs');
-const privateKey = fs.readFileSync("../../secret").toString().trim();
+ const fs = require('fs');
+ const privateKey = fs.readFileSync("../../secret").toString().trim();
 
 module.exports = {
   /**
@@ -36,14 +36,15 @@ module.exports = {
 
   networks: {
     ftmtestnet: {
-      provider: () => new HDWalletProvider(mnemonic, `https://rpc.testnet.fantom.network/`),
+      provider: () => new PrivateKeyProvider(privateKey, `https://rpc.testnet.fantom.network/`),
+      network_id: 4002,
       confirmations: 1,
       timeoutBlocks: 200,
       skipDryRun: true,
       verify: {
-        apiUrl: 'http://localhost:4000/api',
-        apiKey: 'MY_API_KEY',
-        explorerUrl: 'http://localhost:4000/address',
+        apiUrl: 'https://api-testnet.ftmscan.com/',
+        apiKey: '38CQSNZYT3KQ2NECR4FSFFMI2IHY7B5X8D',
+        explorerUrl: 'https://testnet.ftmscan.com/address',
       }
     }
   },

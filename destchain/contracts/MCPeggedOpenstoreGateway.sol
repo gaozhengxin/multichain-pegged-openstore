@@ -40,7 +40,7 @@ interface IFactory {
     function getERC721Address(address creator) external pure returns (address);
 }
 
-interface IERC721 {
+interface MCIERC721 {
     function mint(address to, uint256 tokenId) external;
 
     function burn(uint256 tokenId) external;
@@ -66,6 +66,10 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
         factory = factory_;
     }
 
+    function setFactory(address factory_) external onlyAdmin {
+        factory = factory_;
+    }
+
     function convert1155to721(uint256 tokenId)
         external
         returns (uint256 tokenId721)
@@ -78,17 +82,17 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
         require(IMCOpenstore(token).balanceOf(msg.sender, tokenId) == 1);
         tokenId721 = tokenId.tokenIndex();
         IMCOpenstore(token).burn(msg.sender, tokenId, 1);
-        IERC721(erc721).mint(msg.sender, tokenId721);
+        MCIERC721(erc721).mint(msg.sender, tokenId721);
     }
 
     function convert721to1155(address erc721, uint256 tokenId)
         external
         returns (uint256 tokenId1155)
     {
-        address creator = IERC721(erc721).creator();
+        address creator = MCIERC721(erc721).creator();
         require(erc721 == IFactory(factory).getERC721Address(creator));
-        require(IERC721(erc721).ownerOf(tokenId) == msg.sender);
-        IERC721(erc721).burn(tokenId);
+        require(MCIERC721(erc721).ownerOf(tokenId) == msg.sender);
+        MCIERC721(erc721).burn(tokenId);
         tokenId1155 = uint256(uint160(creator)) << 56;
         tokenId1155 += tokenId;
         tokenId1155 = tokenId1155 << 40;
@@ -109,7 +113,7 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
         if (
             tokenId.tokenMaxSupply() == 1 &&
             erc721.isContract() &&
-            IERC721(erc721).exists(tokenIndex)
+            MCIERC721(erc721).exists(tokenIndex)
         ) {
             return (false, "");
         }
@@ -136,7 +140,7 @@ contract ERC1155Gateway_MintBurn is ERC1155Gateway {
             if (IMCOpenstore(token).totalSupply(tokenId) == 0) {
                 return false;
             }
-            try IERC721(erc721).mint(receiver, tokenIndex) {
+            try MCIERC721(erc721).mint(receiver, tokenIndex) {
                 return true;
             } catch {
                 return false;

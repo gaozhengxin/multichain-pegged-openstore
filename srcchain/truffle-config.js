@@ -18,7 +18,7 @@
  *
  */
 
-var PrivateKeyProvider = require("truffle-privatekey-provider");
+var PrivateKeyProvider = require("@truffle/hdwallet-provider");
 
 const fs = require('fs');
 const privateKey = fs.readFileSync("../../secret").toString().trim();
@@ -34,16 +34,20 @@ module.exports = {
    * $ truffle test --network <network-name>
    */
 
+  plugins: ['truffle-plugin-verify'],
   networks: {
     rinkeby: {
-      provider: () => new PrivateKeyProvider(privateKey, `https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`),
+      provider: () => new PrivateKeyProvider(privateKey, `https://eth-rinkeby.alchemyapi.io/v2/zhdZrMs0eLn1LnNfHJhAd_aOSeUM47M8`),
+      networkCheckTimeout: 100000,
+      network_id: 4,
+      gasPrice: 50000000000,
       confirmations: 1,
       timeoutBlocks: 200,
       skipDryRun: true,
       verify: {
-        apiUrl: 'https://api-rinkeby.etherscan.io/',
-        apiKey: 'TXD94VJ9ARUBYHASVD1YT8XH3AJ2AF58SM',
-        explorerUrl: 'https://rinkeby.etherscan.io/address',
+        apiUrl: 'https://api-rinkeby.etherscan.com/api',
+        apiKey: '',
+        explorerUrl: 'https://rinkeby.etherscan.com/address',
       }
     }
   },
